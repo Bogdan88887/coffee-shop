@@ -1,23 +1,32 @@
-# ***Coffee-Shop***
-## **Coffee Shop - Completely Responsive and Animated Coffee Shop Website for showcasing the best taste of Coffee.**
-- 5 Sections contain :
-  - Home Section: that showcase the header of the site.
-  - About us Section: Clarify what's Making Our Coffee Special!
-  - Menu Section: Introduce our best coffee types menu and prices.
-  - Review Section: See what people say about our service.
-  - Booking Section: Where you can book a table with a number u wanna.
-- Features of the site: 
-  - Animations
-  - Responsive Sticky Navbar
-  - Hover Effects
-  - Animated Page Preloader with css drawing
-  - Nice Border Styles
-  - Clickable Pure Slider
-  - Clip-path effects
-  - Awesome Swiper Slider with pagination
-  - Nice form style
-  - Responsive 4-parts footer
-  - To-Top Button 
-  - Transition Effects
+# Сайт кофейни
 
+Проект показывает меню и отзывы небольшой кофейни. Посетители видят опубликованные отзывы, а зарегистрированные пользователи могут войти и добавить свой.
 
+## Как устроен проект
+
+- `public/` содержит страницу сайта, стили, изображения и сценарии браузера.
+- `src/` содержит NestJS API для регистрации, входа и отзывов.
+- `comments.json` хранит отзывы; `users.json` создаётся автоматически и хранит логины и солёные хэши паролей.
+- `deploy_debian12.py` автоматически подготавливает VPS с Debian 12, собирает сайт, настраивает Nginx, systemd и HTTPS-сертификат для публичного IP.
+
+Отзывы и пользователи сохраняются в JSON без базы данных. В форме отзыва допускается до 45 символов. Одновременно обрабатываются до 30 запросов на создание отзыва; при превышении IP отправителя блокируется на 15 минут. Размер файла отзывов ограничен 3 МиБ, а API показывает 10 последних записей. Список автоматически обновляется на странице.
+
+Пароли обрабатываются встроенным в Node.js алгоритмом scrypt с отдельной случайной солью для каждой учётной записи. Успешный вход открывает форму комментария; сессия хранится в памяти сервера и действует 24 часа.
+
+Защитные параметры и хранилища отделены интерфейсами и внедряются через NestJS Dependency Injection. Основные файлы настроек: `src/comments/comment-protection.ts` и `src/auth/auth-protection.ts`.
+
+## Локальный запуск
+
+Требуется Node.js версии, совместимой с NestJS 12.
+
+```bash
+npm ci
+npm run build
+npm start
+```
+
+После запуска сайт доступен по адресу `http://127.0.0.1:3000`.
+
+## Установка на VPS
+
+Скрипт установки и подробности по настройке собраны в `deploy_debian12.py` и `DEPLOY_DEBIAN12.md`. Скрипт сначала показывает план без изменений. Для установки нужны права root и подтверждение подготовленного сетевого firewall; наружу должны быть доступны порты 80 и 443. HTTPS на IP зависит от актуальной поддержки IP-сертификатов в Certbot и Let’s Encrypt.

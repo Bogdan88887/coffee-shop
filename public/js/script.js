@@ -180,8 +180,14 @@ Set attribute to all links
 
 const form = document.getElementById("commentForm");
 const reviewsWrapper = document.getElementById("reviewsWrapper");
+const authPanel = document.getElementById("authPanel");
 
-if (form && reviewsWrapper) {
+if (form && reviewsWrapper && authPanel) {
+    const registerForm = document.getElementById("registerForm");
+    const loginForm = document.getElementById("loginForm");
+    const logoutButton = document.getElementById("logoutButton");
+    const authForms = document.getElementById("authForms");
+    const authMessage = document.getElementById("authMessage");
     const commentAvatars = Array.from({ length: 10 }, (_, index) =>
         `img/avatars/avatar-${String(index + 1).padStart(2, "0")}.svg`
     );
@@ -201,7 +207,10 @@ if (form && reviewsWrapper) {
         reviewsWrapper.innerHTML = "";
 
         comments.forEach(comment => {
-            const avatar = comment.avatar || commentAvatars[Math.floor(Math.random() * commentAvatars.length)];
+            const avatarPath = typeof comment.avatar === "string" && /^img\/avatars\/avatar-\d{2}\.svg$/.test(comment.avatar)
+                ? comment.avatar
+                : commentAvatars[Math.floor(Math.random() * commentAvatars.length)];
+            const avatar = escapeHtml(avatarPath);
             reviewsWrapper.innerHTML += `
                 <div class="swiper-slide box">
                     <i class="fas fa-quote-left"></i>
@@ -228,11 +237,65 @@ if (form && reviewsWrapper) {
         swiper.update();
     }
 
+    async function refreshAuthState() {
+        const response = await fetch("/api/auth/me");
+        const state = await response.json();
+        const signedIn = Boolean(state.username);
+        form.hidden = !signedIn;
+        authForms.hidden = signedIn;
+        logoutButton.hidden = !signedIn;
+        document.getElementById("name").value = state.username || "";
+        authMessage.textContent = signedIn
+            ? `Вы вошли как ${state.username}. Теперь можно оставить отзыв.`
+            : "Войдите в аккаунт, чтобы написать отзыв. Отзывы других гостей доступны всем.";
+    }
+
+    async function sendAuthForm(url, payload) {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Не удалось выполнить запрос.");
+        return result;
+    }
+
+    registerForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+            await sendAuthForm("/api/auth/register", {
+                username: document.getElementById("registerUsername").value,
+                password: document.getElementById("registerPassword").value
+            });
+            alert("Регистрация завершена. Теперь войдите с этим логином и паролем.");
+            registerForm.reset();
+        } catch (error) { alert(error.message); }
+    });
+
+    loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+            await sendAuthForm("/api/auth/login", {
+                username: document.getElementById("loginUsername").value,
+                password: document.getElementById("loginPassword").value
+            });
+            loginForm.reset();
+            await refreshAuthState();
+        } catch (error) { alert(error.message); }
+    });
+
+    logoutButton.addEventListener("click", async () => {
+        try {
+            await sendAuthForm("/api/auth/logout", {});
+            await refreshAuthState();
+        } catch (error) { alert(error.message); }
+    });
+
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         const comment = {
-            name: document.getElementById("name").value,
             message: document.getElementById("message").value
         };
 
@@ -254,5 +317,8 @@ if (form && reviewsWrapper) {
         }
     });
 
-    loadComments().catch((error) => console.error(error));
+    Promise.all([loadComments(), refreshAuthState()]).catch((error) => console.error(error));
+
+    // Автоматически подгружаем свежие отзывы, не заставляя пользователя обновлять страницу.
+    window.setInterval(() => loadComments().catch((error) => console.error(error)), 30000);
 }

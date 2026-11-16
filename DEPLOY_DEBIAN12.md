@@ -68,7 +68,7 @@ sudo tar -xzf /tmp/coffee-shop-deploy.tar.gz -C /opt/coffee-shop
 ls -la /opt/coffee-shop
 ```
 
-В каталоге должны быть `package.json`, `package-lock.json`, `comments.json`, `src/` и `public/`. Исходный `comments.json` включён в архив: это начальные данные отзывов. После запуска NestJS новые записи будут сохраняться в этот файл.
+В каталоге должны быть `package.json`, `package-lock.json`, `comments.json`, `src/` и `public/`. Исходный `comments.json` включён в архив: это начальные данные отзывов. Скрипт создаёт рядом `users.json`, где сохраняются учётные записи. Оба файла содержат пользовательские данные и должны оставаться доступными на запись только сервисному пользователю.
 
 Создайте системного пользователя приложения:
 
@@ -90,6 +90,8 @@ sudo chown -R root:coffeeshop /opt/coffee-shop
 sudo chmod -R a+rX,go-w /opt/coffee-shop
 sudo chown coffeeshop:coffeeshop /opt/coffee-shop/comments.json
 sudo chmod 640 /opt/coffee-shop/comments.json
+sudo install -o coffeeshop -g coffeeshop -m 640 /dev/null /opt/coffee-shop/users.json
+echo '[]' | sudo -u coffeeshop tee /opt/coffee-shop/users.json >/dev/null
 ```
 
 `comments.json` должен существовать до запуска сервиса. Убедитесь, что у пользователя `coffeeshop` есть право записи в этот файл. Файлы исходников и frontend при этом остаются только для чтения.
@@ -119,7 +121,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/coffee-shop/comments.json
+ReadWritePaths=/opt/coffee-shop/comments.json /opt/coffee-shop/users.json
 
 [Install]
 WantedBy=multi-user.target
@@ -433,23 +435,27 @@ sudo journalctl -u nginx -n 50 --no-pager
 sudo ss -ltnp
 ```
 
-При обновлении кода остановите сервис, сохраните текущие отзывы отдельно, передайте и распакуйте новую версию проекта, затем снова выполните `npm ci` и `npm run build`. Восстановите production `comments.json` и права на него до запуска сервиса:
+При обновлении кода остановите сервис и сохраните отзывы и пользователей отдельно. Передайте и распакуйте новую версию проекта, затем выполните `npm ci` и `npm run build`. Восстановите оба файла данных и их права до запуска сервиса:
 
 ```bash
 sudo systemctl stop coffee-shop
 sudo cp -a /opt/coffee-shop/comments.json /var/backups/coffee-shop-comments.json
+sudo cp -a /opt/coffee-shop/users.json /var/backups/coffee-shop-users.json
 # передайте и распакуйте новую версию исходников в /opt/coffee-shop
 # если архив содержит исходный comments.json, восстановите рабочие отзывы:
 sudo cp -a /var/backups/coffee-shop-comments.json /opt/coffee-shop/comments.json
+sudo cp -a /var/backups/coffee-shop-users.json /opt/coffee-shop/users.json
 sudo chown -R coffeeshop:coffeeshop /opt/coffee-shop
 sudo -u coffeeshop -H sh -c 'cd /opt/coffee-shop && npm ci && npm run build'
 sudo chown -R root:coffeeshop /opt/coffee-shop
 sudo chmod -R a+rX,go-w /opt/coffee-shop
 sudo chown coffeeshop:coffeeshop /opt/coffee-shop/comments.json
 sudo chmod 640 /opt/coffee-shop/comments.json
+sudo chown coffeeshop:coffeeshop /opt/coffee-shop/users.json
+sudo chmod 640 /opt/coffee-shop/users.json
 sudo systemctl start coffee-shop
 ```
 
-Делайте регулярные резервные копии `comments.json`: это файловое хранилище, и файл содержит все отзывы.
+Делайте регулярные резервные копии `comments.json` и `users.json`: это файловое хранилище, в котором находятся отзывы и хэши паролей с солью.
 
 После смены публичного IP обновите IP в команде Certbot, получите новый сертификат, обновите Nginx при изменении путей и проверьте новый адрес. При недоступности порта 80 автоматическая проверка HTTP-01 не сможет обновить короткоживущий сертификат.

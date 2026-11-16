@@ -205,14 +205,33 @@
     <section class="book" id="book">
         <h1 class="heading">comments <span>leave your review</span></h1>
 
-        <form id="commentForm">
+        <div id="authPanel" class="auth-panel">
+            <p id="authMessage">Войдите в аккаунт, чтобы написать отзыв. Отзывы других гостей доступны всем.</p>
+            <div id="authForms" class="auth-forms">
+                <form id="registerForm">
+                    <h2>Регистрация</h2>
+                    <input type="text" id="registerUsername" class="box" placeholder="Логин (3–20 символов)" minlength="3" maxlength="20" autocomplete="username" required>
+                    <input type="password" id="registerPassword" class="box" placeholder="Пароль (не менее 8 символов)" minlength="8" maxlength="128" autocomplete="new-password" required>
+                    <button type="submit" class="btn">Зарегистрироваться</button>
+                </form>
+                <form id="loginForm">
+                    <h2>Вход</h2>
+                    <input type="text" id="loginUsername" class="box" placeholder="Логин" autocomplete="username" required>
+                    <input type="password" id="loginPassword" class="box" placeholder="Пароль" autocomplete="current-password" required>
+                    <button type="submit" class="btn">Войти</button>
+                </form>
+            </div>
+            <button type="button" id="logoutButton" class="btn" hidden>Выйти</button>
+        </div>
+
+        <form id="commentForm" hidden>
             <input
                 type="text"
                 id="name"
                 name="name"
-                placeholder="Your Name"
+                placeholder="Логин"
                 class="box"
-                maxlength="10"
+                readonly
                 required
             >
 
@@ -221,13 +240,13 @@
                 name="message"
                 cols="30"
                 rows="8"
-                placeholder="Write your comment..."
+                placeholder="Напишите отзыв (до 45 символов)"
                 class="box"
                 maxlength="45"
                 required
             ></textarea>
 
-            <input type="submit" class="btn" value="Send Comment">
+            <input type="submit" class="btn" value="Оставить отзыв">
         </form>
 
         <!-- New comments will appear here -->

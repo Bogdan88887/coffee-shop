@@ -31,6 +31,7 @@ APP_USER = "coffeeshop"
 APP_GROUP = "coffeeshop"
 APP_DIR = Path("/opt/coffee-shop")
 DATA_FILE = "comments.json"
+USERS_FILE = "users.json"
 BUILD_DIR = Path("/var/tmp")
 CERTBOT_DIR = Path("/opt/certbot")
 CERTBOT_BIN = CERTBOT_DIR / "bin" / "certbot"
@@ -53,7 +54,7 @@ SOURCE_FILES = (
     "tsconfig.build.json",
 )
 SOURCE_DIRS = ("src", "public")
-APP_MANAGED_ITEMS = (*SOURCE_FILES, *SOURCE_DIRS, "dist", "node_modules", DATA_FILE)
+APP_MANAGED_ITEMS = (*SOURCE_FILES, *SOURCE_DIRS, "dist", "node_modules", DATA_FILE, USERS_FILE)
 APT_BASE_PACKAGES = (
     "curl",
     "ca-certificates",
@@ -133,6 +134,9 @@ def validate_source(source: Path) -> dict[str, object]:
         source / "src" / "comments" / "comments.controller.ts",
         source / "src" / "comments" / "comments.service.ts",
         source / "src" / "comments" / "comments.repository.ts",
+        source / "src" / "auth" / "auth.controller.ts",
+        source / "src" / "auth" / "auth.service.ts",
+        source / "src" / "auth" / "json-auth.repository.ts",
         source / "public" / "index.html",
     ]
     for path in required:
@@ -203,7 +207,7 @@ def print_dry_run(source: Path, address: ipaddress._BaseAddress, email: str | No
         "создать системную учётную запись coffeeshop, если её ещё нет",
         "в отдельном временном каталоге выполнить npm ci --include=dev и npm run build",
         "сохранить управляемые файлы текущего размещения в /var/backups/coffee-shop-deploy",
-        "обновить исходники и dist, сохранив текущий comments.json",
+        "обновить исходники и dist, сохранив comments.json и users.json",
         "установить только production-зависимости в /opt/coffee-shop/node_modules",
         "создать systemd-службу NestJS на 127.0.0.1:3000 и проверить API",
         "настроить Nginx для статики, /api/ и HTTP-01 challenge; выполнить nginx -t",
@@ -771,7 +775,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/coffee-shop/comments.json
+ReadWritePaths=/opt/coffee-shop/comments.json /opt/coffee-shop/users.json
 
 [Install]
 WantedBy=multi-user.target
@@ -1214,6 +1218,10 @@ def copy_managed_app(source: Path, stage: Path, backups: BackupManager) -> None:
     else:
         shutil.copy2(source / DATA_FILE, current_comments)
 
+    current_users = APP_DIR / USERS_FILE
+    if not current_users.exists():
+        current_users.write_text("[]", encoding="utf-8")
+
     gid = get_group_gid()
     os.chown(APP_DIR, 0, gid)
     os.chmod(APP_DIR, 0o755)
@@ -1238,6 +1246,8 @@ def copy_managed_app(source: Path, stage: Path, backups: BackupManager) -> None:
             os.chmod(root, 0o644)
     os.chown(current_comments, get_app_uid(), gid)
     os.chmod(current_comments, 0o640)
+    os.chown(current_users, get_app_uid(), gid)
+    os.chmod(current_users, 0o640)
 
 
 def get_app_uid() -> int:

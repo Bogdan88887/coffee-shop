@@ -5,8 +5,17 @@ import { CommentRecord } from "./comment-record";
 
 const MAX_COMMENTS_FILE_SIZE = 3 * 1024 * 1024;
 
+/** Контракт хранилища отзывов: сервис знает только эти операции, а не формат файла. */
+export interface CommentsRepositoryPort {
+    initialize(): Promise<void>;
+    getLatest(limit: number): Promise<CommentRecord[]>;
+    add(comment: CommentRecord): Promise<void>;
+}
+
+export const COMMENTS_REPOSITORY = Symbol("COMMENTS_REPOSITORY");
+
 @Injectable()
-export class CommentsRepository {
+export class JsonCommentsRepository implements CommentsRepositoryPort {
     private readonly commentsFile = join(process.cwd(), "comments.json");
     private commentsWriteQueue: Promise<unknown> = Promise.resolve();
 
@@ -58,6 +67,8 @@ export class CommentsRepository {
         comments: CommentRecord[];
         serialized: string;
     } {
+        // Новые отзывы находятся в начале массива, поэтому удаление с конца сохраняет их первыми.
+        // Так JSON остаётся ниже лимита, а самые свежие отзывы остаются доступными.
         const trimmed = [...comments];
         let serialized = JSON.stringify(trimmed, null, 2);
 

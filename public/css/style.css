@@ -891,6 +891,37 @@ Page Loader
     border: var(--borderHover);
 }
 
+.auth-panel {
+    max-width: 60rem;
+    margin: 0 auto 2rem;
+    text-align: center;
+}
+
+.auth-panel > p {
+    color: var(--mainColor);
+    font-size: 1.6rem;
+    margin: 1rem 0 2rem;
+}
+
+.auth-forms {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+    gap: 1.5rem;
+}
+
+.auth-forms form {
+    margin: 0;
+}
+
+.auth-forms h2 {
+    color: var(--mainColor);
+    font-size: 2.2rem;
+}
+
+#commentForm[hidden], #authForms[hidden], #logoutButton[hidden] {
+    display: none;
+}
+
 .book form textarea {
     resize: none;
     height: 15rem;
